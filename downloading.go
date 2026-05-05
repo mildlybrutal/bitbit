@@ -109,7 +109,20 @@ func (c *Choker) ApplyChoke() {
 
 // Every ~30 sec, pick 1 random peer outside top set.
 func (c *Choker) OptimisticUnchoke() *Peer {
-	candidates := c.Peers
+	topPeers := c.SelectTopPeers()
+
+	topSet := make(map[*Peer]bool, len(topPeers))
+
+	for _, p := range topPeers {
+		topSet[p.Peer] = true
+	}
+	candidates := []*Peer{}
+
+	for _, ps := range c.Peers {
+		if !topSet[ps.Peer] {
+			candidates = append(candidates, ps.Peer)
+		}
+	}
 
 	if len(candidates) == 0 {
 		return nil
@@ -117,7 +130,7 @@ func (c *Choker) OptimisticUnchoke() *Peer {
 
 	r := rand.Intn(len(candidates))
 
-	return candidates[r].Peer
+	return candidates[r]
 }
 
 func (c *Choker) ApplyWithOptimism() {

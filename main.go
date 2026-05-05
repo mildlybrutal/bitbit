@@ -9,7 +9,17 @@ import (
 func main() {
 	torrent, infohash, _ := ParseTorrentFile("file.torrent")
 
+	fmt.Printf("Name: %q, PieceLength: %d, Pieces: %d bytes\n",
+		torrent.Info.Name, torrent.Info.PieceLength, len(torrent.Info.Pieces))
+
 	rawFile, _ := os.ReadFile(torrent.Info.Name)
+
+	rawFile, err := os.ReadFile(torrent.Info.Name)
+	if err != nil {
+		fmt.Println("ReadFile error:", err)
+		return
+	}
+	fmt.Println("Raw file size:", len(rawFile))
 
 	seed := &Peer{
 		ID:     "seed",
@@ -20,6 +30,8 @@ func main() {
 	for i := range seed.Data {
 		seed.Pieces[i] = true
 	}
+	fmt.Println("Seed piece count:", len(seed.Data))
+
 	dht := &DHT{
 		Self:  seed,
 		Nodes: []*Peer{},
@@ -53,9 +65,9 @@ func main() {
 		Peers:       peerStats,
 		MaxUnchoked: 2,
 	}
-
-	const totalPieces = 4
-	const subPieceCount = 3
+	hashes := SplitPieceHashes(torrent.Info.Pieces)
+	totalPieces := len(hashes)
+	subPieceCount := 3
 
 	PrintState(peers)
 
@@ -95,9 +107,9 @@ func main() {
 
 			pieceData := from.Data[piece]
 
-			hashes := SplitPieceHashes(torrent.Info.Pieces)
+			expectedHashes := hashes[piece]
 
-			if VerifyPiece(pieceData, hashes[piece]) {
+			if VerifyPiece(pieceData, expectedHashes) {
 				fmt.Printf("Piece %d verified\n", piece)
 				leecher1.Pieces[piece] = true
 			} else {

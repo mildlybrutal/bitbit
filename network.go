@@ -9,6 +9,7 @@ import (
 type Message struct {
 	Type  string
 	From  string
+	Data  []byte
 	Piece int
 }
 
@@ -36,6 +37,7 @@ func HandleMessage(p *Peer, conn *net.UDPConn, addr *net.UDPAddr, msg Message) {
 			resp := Message{
 				Type:  "DATA",
 				From:  p.ID,
+				Data:  p.Data[msg.Piece],
 				Piece: msg.Piece,
 			}
 			send(conn, addr, resp)
@@ -43,6 +45,7 @@ func HandleMessage(p *Peer, conn *net.UDPConn, addr *net.UDPAddr, msg Message) {
 
 	case "DATA":
 		p.Pieces[msg.Piece] = true
+		p.Data[msg.Piece] = msg.Data
 		fmt.Printf("%s received piece %d from %s\n", p.ID, msg.Piece, msg.From)
 	}
 }

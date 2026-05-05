@@ -53,10 +53,34 @@ func (d *DHT) FindPeers(key string) []*Peer {
 
 func (d *DHT) Lookup(target NodeID, k int) []*Peer {
 	shortlist := d.FindClosest(target, k)
+	visited := make(map[NodeID]bool)
+	prevBest := shortlist[0]
 
-	for i := 0; i < len(shortlist); i++ {
-		newNodes := shortlist
-		shortlist = append(shortlist, newNodes...)
+	for {
+		prevBest = shortlist[0]
+
+		for _, node := range shortlist {
+			if !visited[node.NodeID] {
+				visited[node.NodeID] = true
+				neighbors := d.FindClosest(node.NodeID, k)
+				shortlist = append(shortlist, neighbors...)
+			}
+		}
+
+		sort.Slice(shortlist, func(i, j int) bool {
+			di := Distance(shortlist[i].NodeID, target)
+			dj := Distance(shortlist[j].NodeID, target)
+			return bytes.Compare(di[:], dj[:]) < 0
+		})
+
+		if len(shortlist) > k {
+			shortlist = shortlist[:k]
+		}
+
+		if shortlist[0] == prevBest {
+			break
+		}
 	}
+
 	return shortlist
 }
