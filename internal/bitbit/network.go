@@ -1,4 +1,4 @@
-package main
+package bitbit
 
 import (
 	"encoding/json"

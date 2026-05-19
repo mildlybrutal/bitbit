@@ -1,9 +1,11 @@
-package main
+package bitbit
 
 import (
 	"encoding/json"
 	"math/rand"
 	"net"
+	"sync"
+	"time"
 )
 
 type Piece []byte
@@ -21,12 +23,24 @@ type Torrent struct {
 }
 
 type Peer struct {
-	ID       string
-	Bitfield []bool
-	NodeID   NodeID
-	Addr     string
-	Data     map[int][]byte
-	Pieces   map[int]bool
+	ID             string
+	Bitfield       []bool
+	NodeID         NodeID
+	Addr           string
+	Data           map[int][]byte
+	Pieces         map[int]bool
+	AmChoking      bool
+	AmInterested   bool
+	PeerChoking    bool
+	PeerInterested bool
+	SnubbedAt      time.Time
+	BytesRecieved  int64
+}
+
+type ConnectionPool struct {
+	mu          sync.Mutex
+	Connections map[string]*PeerConnection
+	MaxPeers    int
 }
 
 type Downloader struct {

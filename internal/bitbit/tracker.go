@@ -1,4 +1,4 @@
-package main
+package bitbit
 
 type Tracker struct {
 	Swarm map[string][]*Peer
