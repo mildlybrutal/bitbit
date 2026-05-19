@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"time"
 )
 
@@ -198,7 +199,8 @@ func ParsePieceMessage(payload []byte) (pieceIndex uint32, blockOffset uint32, d
 
 // Dial opens a TCP connection to a peer and returns a PeerConnection ready for handshake.
 func Dial(addr PeerAddr, infoHash [20]byte, peerID [20]byte) (*PeerConnection, error) {
-	connStr := fmt.Sprintf("%s: %d", addr.IP.String(), addr.Port)
+	connStr := net.JoinHostPort(addr.IP.String(), strconv.FormatUint(uint64(addr.Port), 10))
+
 	conn, err := net.DialTimeout("tcp", connStr, 10*time.Second)
 	if err != nil {
 		return nil, fmt.Errorf("dial %s: %w", connStr, err)

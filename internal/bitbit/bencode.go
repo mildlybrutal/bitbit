@@ -18,6 +18,8 @@ import (
 
 type TorrentFile struct {
 	Announcer    string   `bencode:"announce"`
+	AnnounceList []string `bencode:"announce-list"`
+	URLList      []string `bencode:"url-list"`
 	Created_by   string   `bencode:"created_by"`
 	Created_date string   `bencode:"created_date"`
 	Encoding     string   `bencode:"encoding"`
@@ -152,6 +154,31 @@ func (d *Decoder) decodeDict() (map[string]any, error) {
 func MapToTorrent(raw map[string]any) (*TorrentFile, error) {
 	t := &TorrentFile{}
 	t.Announcer, _ = raw["announce"].(string)
+	t.AnnounceList = appendAnnounceURLs(t.AnnounceList, t.Announcer)
+	if announceListRaw, ok := raw["announce-list"].([]any); ok {
+		for _, tier := range announceListRaw {
+			switch entries := tier.(type) {
+			case string:
+				t.AnnounceList = appendAnnounceURLs(t.AnnounceList, entries)
+			case []any:
+				for _, entry := range entries {
+					if s, ok := entry.(string); ok {
+						t.AnnounceList = appendAnnounceURLs(t.AnnounceList, s)
+					}
+				}
+			}
+		}
+	}
+	switch urls := raw["url-list"].(type) {
+	case string:
+		t.URLList = []string{urls}
+	case []any:
+		for _, entry := range urls {
+			if s, ok := entry.(string); ok {
+				t.URLList = append(t.URLList, s)
+			}
+		}
+	}
 	t.Created_by, _ = raw["created by"].(string)
 	t.Created_date, _ = raw["creation date"].(string)
 	t.Encoding, _ = raw["encoding"].(string)
@@ -193,10 +220,36 @@ func MapToTorrent(raw map[string]any) (*TorrentFile, error) {
 				}
 			}
 			t.Info.Files = append(t.Info.Files, file)
+
+		}
+	}
+
+	if len(t.Info.Files) > 0 && t.Info.Length == 0 {
+		for _, f := range t.Info.Files {
+			t.Info.Length += f.Length
 		}
 	}
 
 	return t, nil
+}
+
+func appendAnnounceURLs(dst []string, urls ...string) []string {
+	for _, raw := range urls {
+		if raw == "" {
+			continue
+		}
+		seen := false
+		for _, existing := range dst {
+			if existing == raw {
+				seen = true
+				break
+			}
+		}
+		if !seen {
+			dst = append(dst, raw)
+		}
+	}
+	return dst
 }
 
 func SplitPieceHashes(pieces []byte) [][]byte {
